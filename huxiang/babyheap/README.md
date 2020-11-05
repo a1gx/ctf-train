@@ -1,0 +1,2 @@
+# writeup
+利用连续的usortedbin会合并，同时再次分配时prevsize不会改变的特点,产生overlap，修改fd,利用tcache不会检查大小的机制分配到任意地址，修改free_hook,get_shell
