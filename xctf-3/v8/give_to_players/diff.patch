@@ -1,0 +1,23 @@
+diff --git a/src/objects/code.cc b/src/objects/code.cc
+index 1004180669..b032e456b9 100644
+--- a/src/objects/code.cc
++++ b/src/objects/code.cc
+@@ -943,18 +943,6 @@ void DependentCode::InstallDependency(Isolate* isolate,
+                                       const MaybeObjectHandle& code,
+                                       Handle<HeapObject> object,
+                                       DependencyGroup group) {
+-  if (V8_UNLIKELY(FLAG_trace_code_dependencies)) {
+-    StdoutStream{} << "Installing dependency of [" << code->GetHeapObject()
+-                   << "] on [" << object << "] in group ["
+-                   << DependencyGroupName(group) << "]\n";
+-  }
+-  Handle<DependentCode> old_deps(DependentCode::GetDependentCode(object),
+-                                 isolate);
+-  Handle<DependentCode> new_deps =
+-      InsertWeakCode(isolate, old_deps, group, code);
+-  // Update the list head if necessary.
+-  if (!new_deps.is_identical_to(old_deps))
+-    DependentCode::SetDependentCode(object, new_deps);
+ }
+ 
+ Handle<DependentCode> DependentCode::InsertWeakCode(

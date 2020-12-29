@@ -1,0 +1,6 @@
+version: '3'
+services:
+        challenge:
+                image: swr.cn-north-1.myhuaweicloud.com/hwstaff_pub_pentest/ctf_nday_docker_escape:v0.1
+                ports:
+                        - "2222:22"

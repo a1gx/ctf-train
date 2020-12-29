@@ -1,0 +1,5 @@
+Package libc6-dbg-riscv64-cross is a part of the cross-compiling environment 
+for riscv64 target. It was created from libc6-dbg package using the dpkg-cross tool.
+
+To get more information about libc6-dbg or dpkg-cross packages,
+please install those and read the provided documentation.

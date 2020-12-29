@@ -1,0 +1,44 @@
+#!/usr/bin/python
+#coding=utf-8
+from PwnContext import *
+from IPython import embed as ipy
+
+context.terminal = ['gnome-terminal','-x','sh','-c']
+context.log_level = 'debug'
+
+s      = lambda data               :p.send(data) 
+sa      = lambda delim,data         :p.sendafter(delim, data)
+sl      = lambda data               :p.sendline(data)
+sla     = lambda delim,data         :p.sendlineafter(delim, data)
+r      = lambda numb=4096          :p.recv(numb)
+rl      = lambda                    :p.recvline()
+ru      = lambda delims,drop=False  :p.recvuntil(delims,drop)
+uu32    = lambda data               :u32(data.ljust(4, '\x00'))
+uu64    = lambda data               :u64(data.ljust(8, '\x00'))
+info    = lambda tag, addr        :p.info(tag + ': {:#x}'.format(addr))
+irt     = lambda                    :p.interactive()
+# context.binary = './honorbook'
+
+def add(idx,name,msg):
+	sla('Code: ','1')
+	sla('ID: ',str(idx))
+	sa('User name: ',name)
+	sa('Msg: ',msg)
+
+def delete(idx):
+	sla('Code: ','2')
+	sla('ID: ',str(idx))
+
+def show(idx):
+	sla('Code: ','3')
+	sla('ID: ',str(idx))
+
+def edit(idx,msg):
+	sla('Code: ','4')
+	sla('Index: ',str(idx))
+	sa('Msg: ',msg)
+
+
+p = process('./qemu-riscv64 -L ./libs/ ./honorbook',shell=True)
+add(1,'aaa','aaaaaaa\n')
+irt()

@@ -1,0 +1,27 @@
+#!/usr/bin/python
+#coding=utf-8
+from PwnContext import *
+from IPython import embed as ipy
+
+context.terminal = ['gnome-terminal','-x','sh','-c']
+context.log_level = 'debug'
+
+s      = lambda data               :p.send(data) 
+sa      = lambda delim,data         :p.sendafter(delim, data)
+sl      = lambda data               :p.sendline(data)
+sla     = lambda delim,data         :p.sendlineafter(delim, data)
+r      = lambda numb=4096          :p.recv(numb)
+rl      = lambda                    :p.recvline()
+ru      = lambda delims,drop=False  :p.recvuntil(delims,drop)
+uu32    = lambda data               :u32(data.ljust(4, '\x00'))
+uu64    = lambda data               :u64(data.ljust(8, '\x00'))
+irt     = lambda                    :p.interactive()
+dbg     = lambda gs=''    :gdb.attach(p,gdbscript=gs)
+def lg(s,addr):
+    print '\033[1;31;40m%20s-->0x%x\033[0m'%(s,addr)
+
+p = process('qemu-riscv64 -g 1234 -L ./libs harmoshell',shell=True)
+def shell(s):
+	sla('$ ',s)
+shell('ls')
+irt()

